@@ -1,4 +1,5 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const https = require('https');
 
 const client = new Client({
   intents: [
@@ -8,37 +9,58 @@ const client = new Client({
   ],
 });
 
-// Add or remove words from this list as needed
-const bannedWords = [
-  'word1', 'word2', 'word3' // replace with actual words you want to filter
+const commands = [
+  new SlashCommandBuilder()
+    .setName('dog')
+    .setDescription('Get a random dog picture! 🐶')
+    .toJSON(),
 ];
 
-client.once('ready', () => {
+// Register slash commands when bot is ready
+client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
+
+  const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+  try {
+    await rest.put(
+      Routes.applicationCommands(client.user.id),
+      { body: commands }
+    );
+    console.log('Slash commands registered!');
+  } catch (err) {
+    console.error('Failed to register commands:', err);
+  }
 });
 
-client.on('messageCreate', async (message) => {
-  // Ignore messages from bots
-  if (message.author.bot) return;
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
 
-  const content = message.content.toLowerCase();
+  if (interaction.commandName === 'dog') {
+    await interaction.deferReply();
 
-  const foundBannedWord = bannedWords.some((word) =>
-    content.includes(word)
-  );
+    // Fetch a random dog image from the Dog CEO API
+    const url = 'https://dog.ceo/api/breeds/image/random';
 
-  if (foundBannedWord) {
-    try {
-      await message.delete();
-      const warning = await message.channel.send(
-        `⚠️ ${message.author}, watch your language!`
-      );
-
-      // Auto-delete the warning after 5 seconds
-      setTimeout(() => warning.delete(), 5000);
-    } catch (err) {
-      console.error('Failed to delete message:', err);
-    }
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', async () => {
+        try {
+          const json = JSON.parse(data);
+          await interaction.editReply({
+            content: '🐶 Here is your dog!',
+            embeds: [{
+              image: { url: json.message },
+              color: 0xf4a460,
+            }]
+          });
+        } catch (err) {
+          await interaction.editReply('❌ Couldn\'t fetch a dog pic, try again!');
+        }
+      });
+    }).on('error', async () => {
+      await interaction.editReply('❌ Something went wrong, try again!');
+    });
   }
 });
 
