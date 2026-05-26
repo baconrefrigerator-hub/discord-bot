@@ -8,8 +8,8 @@ const client = new Client({
 // ===== SLASH COMMAND =====
 const commands = [
   new SlashCommandBuilder()
-    .setName('wordimg')
-    .setDescription('Adds a random word on an image')
+    .setName('boxes')
+    .setDescription('Adds random boxes on an image')
     .addAttachmentOption(option =>
       option.setName('image')
         .setDescription('Upload an image')
@@ -33,20 +33,32 @@ client.once('ready', async () => {
   }
 });
 
-// ===== RANDOM WORDS =====
-const words = [
-  "LOL", "EPIC", "WOW", "BRUH", "SKIBIDI", "NOOB", "WIN", "FAIL", "OMG", "CRAZY"
-];
+// ===== RANDOM BOX GENERATOR =====
+function generateBoxes() {
+  let svg = `<svg width="512" height="512">`;
 
-function randomWord() {
-  return words[Math.floor(Math.random() * words.length)];
+  for (let i = 0; i < 25; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    const size = 20 + Math.random() * 120;
+
+    const color = `rgba(${Math.floor(Math.random()*255)},
+                         ${Math.floor(Math.random()*255)},
+                         ${Math.floor(Math.random()*255)},
+                         0.6)`;
+
+    svg += `<rect x="${x}" y="${y}" width="${size}" height="${size}" fill="${color}" />`;
+  }
+
+  svg += `</svg>`;
+  return Buffer.from(svg);
 }
 
 // ===== IMAGE PROCESS =====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'wordimg') {
+  if (interaction.commandName === 'boxes') {
     await interaction.deferReply();
 
     const img = interaction.options.getAttachment('image');
@@ -55,19 +67,13 @@ client.on('interactionCreate', async interaction => {
       const res = await fetch(img.url);
       const buffer = Buffer.from(await res.arrayBuffer());
 
-      const word = randomWord();
+      const boxes = generateBoxes();
 
-      const image = await sharp(buffer)
+      const output = await sharp(buffer)
         .resize(512, 512)
         .composite([
           {
-            input: Buffer.from(
-              `<svg width="512" height="512">
-                <text x="50%" y="50%" font-size="60"
-                fill="white" stroke="black" stroke-width="2"
-                text-anchor="middle">${word}</text>
-              </svg>`
-            ),
+            input: boxes,
             top: 0,
             left: 0
           }
@@ -75,12 +81,12 @@ client.on('interactionCreate', async interaction => {
         .toBuffer();
 
       await interaction.editReply({
-        files: [{ attachment: image, name: 'word.png' }]
+        files: [{ attachment: output, name: 'boxes.png' }]
       });
 
     } catch (err) {
       console.error(err);
-      await interaction.editReply('Failed to edit image.');
+      await interaction.editReply('Failed to process image.');
     }
   }
 });
