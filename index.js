@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const https = require('https');
 
 const ROLE_ID = '1508687596555993148';
@@ -32,6 +32,26 @@ client.once('ready', async () => {
     console.log('Slash commands registered!');
   } catch (err) {
     console.error('Failed to register commands:', err);
+  }
+});
+
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+
+  if (message.content === '!clear_all') {
+    if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      return message.reply('❌ You need to be an admin to use this command!');
+    }
+
+    await message.delete();
+
+    let deleted;
+    do {
+      deleted = await message.channel.bulkDelete(100, true);
+    } while (deleted.size >= 2);
+
+    const notice = await message.channel.send('🧹 Channel cleared!');
+    setTimeout(() => notice.delete(), 3000);
   }
 });
 
