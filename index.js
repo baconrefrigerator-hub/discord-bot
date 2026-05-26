@@ -2,8 +2,8 @@ const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require
 const https = require('https');
 
 const ROLE_ID = '1508687596555993148';
-const WIN_CHANCE = 0.15; // 15%
-const SECRET_DOG_URL = 'https://images.dog.ceo/breeds/rottweiler/n02106550_107.jpg';
+const WIN_CHANCE = 0.15;
+const SECRET_DOG_URL = 'https://cdn.discordapp.com/attachments/1508689243537539224/1508693874598477884/image0.jpg?ex=6a167829&is=6a1526a9&hm=7be8a8dd9d94f83280fe72c2ededed4b71c12dfa4e3ffe9c6d839e152479ec22&';
 
 const client = new Client({
   intents: [
@@ -61,7 +61,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // Non-winner gets a random dog
     const url = 'https://dog.ceo/api/breeds/image/random';
     https.get(url, (res) => {
       let data = '';
