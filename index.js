@@ -5,11 +5,11 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// ===== REGISTER SLASH COMMAND =====
+// ===== SLASH COMMAND SETUP =====
 const commands = [
   new SlashCommandBuilder()
     .setName('pixel')
-    .setDescription('Pixelate an image')
+    .setDescription('Turn an image into extreme pixel art')
     .addAttachmentOption(option =>
       option.setName('image')
         .setDescription('Upload an image')
@@ -17,6 +17,7 @@ const commands = [
     )
 ].map(cmd => cmd.toJSON());
 
+// Register commands
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 client.once('ready', async () => {
@@ -27,7 +28,7 @@ client.once('ready', async () => {
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
-    console.log('Slash commands registered');
+    console.log('Slash command registered');
   } catch (err) {
     console.error(err);
   }
@@ -40,24 +41,25 @@ client.on('interactionCreate', async interaction => {
   if (interaction.commandName === 'pixel') {
     await interaction.deferReply();
 
-    const attachment = interaction.options.getAttachment('image');
+    const image = interaction.options.getAttachment('image');
 
     try {
-      const response = await fetch(attachment.url);
-      const buffer = Buffer.from(await response.arrayBuffer());
+      const res = await fetch(image.url);
+      const buffer = Buffer.from(await res.arrayBuffer());
 
-      const pixelated = await sharp(buffer)
-        .resize({ width: 32, height: 32, fit: 'inside' })
-        .resize({ width: 512, height: 512, kernel: sharp.kernel.nearest })
+      // 🔥 EXTREME PIXEL EFFECT
+      const output = await sharp(buffer)
+        .resize({ width: 8, height: 8, fit: 'inside' }) // SUPER low resolution
+        .resize({ width: 512, height: 512, kernel: sharp.kernel.nearest }) // scale up hard pixels
         .toBuffer();
 
       await interaction.editReply({
-        files: [{ attachment: pixelated, name: 'pixel.png' }]
+        files: [{ attachment: output, name: 'pixel.png' }]
       });
 
     } catch (err) {
       console.error(err);
-      await interaction.editReply('Failed to pixelate image.');
+      await interaction.editReply('❌ Failed to pixelate image.');
     }
   }
 });
