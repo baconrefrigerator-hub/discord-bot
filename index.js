@@ -5,11 +5,11 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// ===== SLASH COMMAND SETUP =====
+// ===== SLASH COMMAND =====
 const commands = [
   new SlashCommandBuilder()
     .setName('pixel')
-    .setDescription('Turn an image into extreme pixel art')
+    .setDescription('Minecraft-style block filter')
     .addAttachmentOption(option =>
       option.setName('image')
         .setDescription('Upload an image')
@@ -17,7 +17,6 @@ const commands = [
     )
 ].map(cmd => cmd.toJSON());
 
-// Register commands
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 client.once('ready', async () => {
@@ -28,38 +27,47 @@ client.once('ready', async () => {
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
-    console.log('Slash command registered');
+    console.log('Slash command loaded');
   } catch (err) {
     console.error(err);
   }
 });
 
-// ===== PIXEL COMMAND =====
+// ===== MINECRAFT BLOCK PIXEL FILTER =====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'pixel') {
     await interaction.deferReply();
 
-    const image = interaction.options.getAttachment('image');
+    const img = interaction.options.getAttachment('image');
 
     try {
-      const res = await fetch(image.url);
+      const res = await fetch(img.url);
       const buffer = Buffer.from(await res.arrayBuffer());
 
-      // 🔥 EXTREME PIXEL EFFECT
+      // 🧱 EXTREME MINECRAFT STYLE
       const output = await sharp(buffer)
-        .resize({ width: 8, height: 8, fit: 'inside' }) // SUPER low resolution
-        .resize({ width: 512, height: 512, kernel: sharp.kernel.nearest }) // scale up hard pixels
+        .resize({
+          width: 8,
+          height: 8,
+          fit: 'inside',
+          kernel: sharp.kernel.nearest
+        })
+        .resize({
+          width: 512,
+          height: 512,
+          kernel: sharp.kernel.nearest
+        })
         .toBuffer();
 
       await interaction.editReply({
-        files: [{ attachment: output, name: 'pixel.png' }]
+        files: [{ attachment: output, name: 'minecraft.png' }]
       });
 
     } catch (err) {
       console.error(err);
-      await interaction.editReply('❌ Failed to pixelate image.');
+      await interaction.editReply('Failed to process image.');
     }
   }
 });
