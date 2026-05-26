@@ -8,8 +8,8 @@ const client = new Client({
 // ===== SLASH COMMAND =====
 const commands = [
   new SlashCommandBuilder()
-    .setName('pixel')
-    .setDescription('Minecraft-style block filter')
+    .setName('wordimg')
+    .setDescription('Adds a random word on an image')
     .addAttachmentOption(option =>
       option.setName('image')
         .setDescription('Upload an image')
@@ -27,17 +27,26 @@ client.once('ready', async () => {
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
-    console.log('Slash command loaded');
+    console.log('Slash command registered');
   } catch (err) {
     console.error(err);
   }
 });
 
-// ===== MINECRAFT BLOCK PIXEL FILTER =====
+// ===== RANDOM WORDS =====
+const words = [
+  "LOL", "EPIC", "WOW", "BRUH", "SKIBIDI", "NOOB", "WIN", "FAIL", "OMG", "CRAZY"
+];
+
+function randomWord() {
+  return words[Math.floor(Math.random() * words.length)];
+}
+
+// ===== IMAGE PROCESS =====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'pixel') {
+  if (interaction.commandName === 'wordimg') {
     await interaction.deferReply();
 
     const img = interaction.options.getAttachment('image');
@@ -46,28 +55,32 @@ client.on('interactionCreate', async interaction => {
       const res = await fetch(img.url);
       const buffer = Buffer.from(await res.arrayBuffer());
 
-      // 🧱 EXTREME MINECRAFT STYLE
-      const output = await sharp(buffer)
-        .resize({
-          width: 8,
-          height: 8,
-          fit: 'inside',
-          kernel: sharp.kernel.nearest
-        })
-        .resize({
-          width: 512,
-          height: 512,
-          kernel: sharp.kernel.nearest
-        })
+      const word = randomWord();
+
+      const image = await sharp(buffer)
+        .resize(512, 512)
+        .composite([
+          {
+            input: Buffer.from(
+              `<svg width="512" height="512">
+                <text x="50%" y="50%" font-size="60"
+                fill="white" stroke="black" stroke-width="2"
+                text-anchor="middle">${word}</text>
+              </svg>`
+            ),
+            top: 0,
+            left: 0
+          }
+        ])
         .toBuffer();
 
       await interaction.editReply({
-        files: [{ attachment: output, name: 'minecraft.png' }]
+        files: [{ attachment: image, name: 'word.png' }]
       });
 
     } catch (err) {
       console.error(err);
-      await interaction.editReply('Failed to process image.');
+      await interaction.editReply('Failed to edit image.');
     }
   }
 });
