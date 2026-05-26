@@ -1,6 +1,9 @@
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
 const https = require('https');
 
+const ROLE_ID = '1508687596555993148';
+const WIN_CHANCE = 0.15; // 15%
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -12,11 +15,10 @@ const client = new Client({
 const commands = [
   new SlashCommandBuilder()
     .setName('dog')
-    .setDescription('Get a random dog picture! 🐶')
+    .setDescription('Get a random dog picture! 🐶 Land the secret dog to win a role!')
     .toJSON(),
 ];
 
-// Register slash commands when bot is ready
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
@@ -38,8 +40,12 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.commandName === 'dog') {
     await interaction.deferReply();
 
-    // Fetch a random dog image from the Dog CEO API
-    const url = 'https://dog.ceo/api/breeds/image/random';
+    // 15% chance to show the winning Rottweiler
+    const isWinner = Math.random() < WIN_CHANCE;
+
+    const url = isWinner
+      ? 'https://dog.ceo/api/breed/rottweiler/images/random'
+      : 'https://dog.ceo/api/breeds/image/random';
 
     https.get(url, (res) => {
       let data = '';
@@ -47,13 +53,33 @@ client.on('interactionCreate', async (interaction) => {
       res.on('end', async () => {
         try {
           const json = JSON.parse(data);
+          const imageUrl = json.message;
+
+          let content = '🐶 Here is your dog!';
+          let color = 0xf4a460;
+
+          if (isWinner) {
+            try {
+              await interaction.member.roles.add(ROLE_ID);
+              content = `🎉 **YOU FOUND THE SECRET DOG!** You've been given the <@&${ROLE_ID}> role!`;
+              color = 0xffd700;
+            } catch (roleErr) {
+              console.error('Failed to assign role:', roleErr);
+              content = '🐶 Here is your dog! (Couldn\'t assign role — check bot permissions)';
+            }
+          }
+
           await interaction.editReply({
-            content: '🐶 Here is your dog!',
+            content,
             embeds: [{
-              image: { url: json.message },
-              color: 0xf4a460,
+              image: { url: imageUrl },
+              color,
+              footer: isWinner
+                ? { text: '🏆 Lucky winner!' }
+                : { text: 'Keep trying for a secret reward...' },
             }]
           });
+
         } catch (err) {
           await interaction.editReply('❌ Couldn\'t fetch a dog pic, try again!');
         }
