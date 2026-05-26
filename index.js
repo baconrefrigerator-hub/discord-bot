@@ -10,6 +10,7 @@ const client = new Client({
 
 const commands = [
   new SlashCommandBuilder().setName("ping").setDescription("Check your ping!"),
+  new SlashCommandBuilder().setName("dead").setDescription("Ping everyone and ask if they're dead!"),
 ].map((cmd) => cmd.toJSON());
 
 client.once("ready", async () => {
@@ -34,6 +35,10 @@ client.on("interactionCreate", async (interaction) => {
   if (interaction.commandName === "ping") {
     const ping = client.ws.ping;
     await interaction.reply(`🏓 Pong! Your ping is **${ping}ms**`);
+  }
+
+  if (interaction.commandName === "dead") {
+    await interaction.reply("@everyone dead?");
   }
 });
 
