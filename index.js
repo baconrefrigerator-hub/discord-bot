@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require("discord.js");
+const { Client, GatewayIntentBits } = require('discord.js');
 
 const client = new Client({
   intents: [
@@ -8,38 +8,38 @@ const client = new Client({
   ],
 });
 
-const commands = [
-  new SlashCommandBuilder().setName("ping").setDescription("Check your ping!"),
-  new SlashCommandBuilder().setName("dead").setDescription("Ping everyone and ask if they're dead!"),
-].map((cmd) => cmd.toJSON());
+// Add or remove words from this list as needed
+const bannedWords = [
+  'word1', 'word2', 'word3' // replace with actual words you want to filter
+];
 
-client.once("ready", async () => {
-  console.log(`Logged in as ${client.user.tag}!`);
-
-  const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
-  await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
-  console.log("Slash commands registered!");
+client.once('ready', () => {
+  console.log(`Logged in as ${client.user.tag}`);
 });
 
-client.on("messageCreate", (message) => {
+client.on('messageCreate', async (message) => {
+  // Ignore messages from bots
   if (message.author.bot) return;
 
-  if (message.content.toLowerCase() === "hey") {
-    message.reply("Hi!");
+  const content = message.content.toLowerCase();
+
+  const foundBannedWord = bannedWords.some((word) =>
+    content.includes(word)
+  );
+
+  if (foundBannedWord) {
+    try {
+      await message.delete();
+      const warning = await message.channel.send(
+        `⚠️ ${message.author}, watch your language!`
+      );
+
+      // Auto-delete the warning after 5 seconds
+      setTimeout(() => warning.delete(), 5000);
+    } catch (err) {
+      console.error('Failed to delete message:', err);
+    }
   }
 });
 
-client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-
-  if (interaction.commandName === "ping") {
-    const ping = client.ws.ping;
-    await interaction.reply(`🏓 Pong! Your ping is **${ping}ms**`);
-  }
-
-  if (interaction.commandName === "dead") {
-    await interaction.reply("@everyone dead?");
-  }
-});
-
-client.login(process.env.TOKEN);
+client.login(process.env.DISCORD_TOKEN);
