@@ -2,7 +2,11 @@ const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require
 const sharp = require('sharp');
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ]
 });
 
 // ===== SLASH COMMAND =====
@@ -27,20 +31,21 @@ client.once('ready', async () => {
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
+
     console.log('Slash command registered');
   } catch (err) {
     console.error(err);
   }
 });
 
-// ===== RANDOM BOX GENERATOR =====
+// ===== RANDOM BOXES =====
 function generateBoxes() {
   let svg = `<svg width="512" height="512">`;
 
   for (let i = 0; i < 25; i++) {
     const x = Math.random() * 512;
     const y = Math.random() * 512;
-    const size = 20 + Math.random() * 120;
+    const size = 40 + Math.random() * 140;
 
     const color = `rgba(${Math.floor(Math.random()*255)},
                          ${Math.floor(Math.random()*255)},
@@ -54,7 +59,7 @@ function generateBoxes() {
   return Buffer.from(svg);
 }
 
-// ===== IMAGE PROCESS =====
+// ===== IMAGE COMMAND =====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -67,13 +72,11 @@ client.on('interactionCreate', async interaction => {
       const res = await fetch(img.url);
       const buffer = Buffer.from(await res.arrayBuffer());
 
-      const boxes = generateBoxes();
-
       const output = await sharp(buffer)
         .resize(512, 512)
         .composite([
           {
-            input: boxes,
+            input: generateBoxes(),
             top: 0,
             left: 0
           }
@@ -88,6 +91,17 @@ client.on('interactionCreate', async interaction => {
       console.error(err);
       await interaction.editReply('Failed to process image.');
     }
+  }
+});
+
+// ===== ROBUX AUTO REPLY =====
+client.on('messageCreate', message => {
+  if (message.author.bot) return;
+
+  const msg = message.content.toLowerCase();
+
+  if (msg.includes('robux')) {
+    message.reply('NAHHH YOU POOR NGL! 💀');
   }
 });
 
